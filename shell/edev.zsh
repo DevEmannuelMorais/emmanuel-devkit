@@ -7,6 +7,13 @@ if [[ -n "$EDEV_SHELL_LOADED" ]]; then
   return 0
 fi
 
+: "${EDEV_CONFIG_DIR:=$HOME/.config/edev}"
+: "${EDEV_CONFIG_FILE:=$EDEV_CONFIG_DIR/config}"
+
+if [[ -f "$EDEV_CONFIG_FILE" ]]; then
+  source "$EDEV_CONFIG_FILE"
+fi
+
 export EDEV_SHELL_LOADED="true"
 
 # ============================================================
@@ -100,14 +107,19 @@ alias esall='edev setup all'
 # Java
 # ============================================================
 
-alias eji='edev java info'
-alias ej8='edev java use temurin-8'
-alias ej11='edev java use temurin-11'
-alias ej17='edev java use temurin-17'
-alias ej21='edev java use temurin-21'
+alias javaInfo='edev java info'
+alias javaList='edev java list'
+alias javaRemote='edev java remote'
+alias javaInstall='edev java install'
+alias javaUseGlobal='edev java use-global'
+alias javaUseLocal='edev java use-local'
+alias javaWhere='edev java where'
+alias javaWhich='edev java which'
 
-alias ejinstall='edev java install'
-alias ejuse='edev java use'
+alias java8='edev java 8'
+alias java11='edev java 11'
+alias java17='edev java 17'
+alias java21='edev java 21'
 
 # Compatibilidade com seu CLI antigo
 alias javaInfo='edev java info'

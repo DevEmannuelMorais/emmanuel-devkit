@@ -14,6 +14,7 @@ source "$EDEV_HOME/lib/servers.sh"
 source "$EDEV_HOME/lib/update.sh"
 source "$EDEV_HOME/lib/migrations.sh"
 source "$EDEV_HOME/lib/project.sh"
+source "$EDEV_HOME/lib/config.sh"
 
 case "$1" in
   help|"")
@@ -34,7 +35,11 @@ case "$1" in
 
   project)
     projectCommand "${@:2}" 
-  ;;    
+  ;;
+
+  config)
+    configCommand "${@:2}"
+  ;; 
 
   doctor)
     edevDoctor
@@ -72,20 +77,67 @@ case "$1" in
     esac
     ;;
 
-  java)
+      java)
     case "$2" in
+      help|"")
+        javaHelp
+        ;;
+
       info)
         javaInfo
         ;;
-      use)
-        javaUse "$3"
+
+      list)
+        javaList
         ;;
+
+      remote)
+        javaRemote
+        ;;
+
       install)
         javaInstall "$3"
         ;;
+
+      use-global)
+        javaUseGlobal "$3"
+        ;;
+
+      use-local)
+        javaUseLocal "$3"
+        ;;
+
+      use)
+        javaUseGlobal "$3"
+        ;;
+
+      where)
+        javaWhere
+        ;;
+
+      which)
+        javaWhich
+        ;;
+
+      8)
+        javaUse8
+        ;;
+
+      11)
+        javaUse11
+        ;;
+
+      17)
+        javaUse17
+        ;;
+
+      21)
+        javaUse21
+        ;;
+
       *)
         fail "Comando Java inválido."
-        echo "Use: edev java info|use|install"
+        echo "Use: edev java help"
         exit 1
         ;;
     esac
