@@ -7,14 +7,15 @@ EDEV_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$EDEV_HOME/lib/core.sh"
 source "$EDEV_HOME/lib/prompts.sh"
 source "$EDEV_HOME/lib/paths.sh"
+source "$EDEV_HOME/lib/config.sh"
 source "$EDEV_HOME/lib/ubuntu.sh"
+source "$EDEV_HOME/lib/project.sh"
 source "$EDEV_HOME/lib/java.sh"
 source "$EDEV_HOME/lib/node.sh"
 source "$EDEV_HOME/lib/servers.sh"
 source "$EDEV_HOME/lib/update.sh"
 source "$EDEV_HOME/lib/migrations.sh"
-source "$EDEV_HOME/lib/project.sh"
-source "$EDEV_HOME/lib/config.sh"
+source "$EDEV_HOME/lib/maven.sh"
 
 case "$1" in
   help|"")
@@ -27,19 +28,19 @@ case "$1" in
 
   update)
     edevUpdate
-  ;;
+    ;;
 
   migrate)
     edevMigrate
-  ;;
+    ;;
 
   project)
-    projectCommand "${@:2}" 
-  ;;
+    projectCommand "${@:2}"
+    ;;
 
   config)
     configCommand "${@:2}"
-  ;; 
+    ;;
 
   doctor)
     edevDoctor
@@ -50,18 +51,23 @@ case "$1" in
       base)
         setupBase
         ;;
+
       node)
         setupNode
         ;;
+
       java-legacy)
         setupJavaLegacy
         ;;
+
       java-modern)
         setupJavaModern
         ;;
+
       servers)
         setupServers
         ;;
+
       all|"")
         setupBase
         setupNode
@@ -69,6 +75,7 @@ case "$1" in
         setupJavaModern
         setupServers
         ;;
+
       *)
         fail "Setup inválido: $2"
         echo "Use: edev setup base|node|java-legacy|java-modern|servers|all"
@@ -77,14 +84,14 @@ case "$1" in
     esac
     ;;
 
-      java)
+  java)
     case "$2" in
       help|"")
         javaHelp
         ;;
 
       info)
-        javaInfo
+        javaInfo "$3"
         ;;
 
       list)
@@ -119,6 +126,10 @@ case "$1" in
         javaWhich
         ;;
 
+      6)
+        javaUse6
+        ;;
+
       8)
         javaUse8
         ;;
@@ -143,14 +154,58 @@ case "$1" in
     esac
     ;;
 
+   maven)
+    case "$2" in
+      help|"")
+        mavenHelp
+        ;;
+
+      info)
+        mavenInfo
+        ;;
+
+      list)
+        mavenList
+        ;;
+
+      remote)
+        mavenRemote
+        ;;
+
+      install)
+        mavenInstall "$3"
+        ;;
+
+      use)
+        mavenUse "$3"
+        ;;
+
+      6)
+        mavenUse6
+        ;;
+
+      39)
+        mavenUse39
+        ;;
+
+      *)
+        fail "Comando Maven inválido."
+        echo "Use: edev maven help"
+        exit 1
+        ;;
+    esac
+  ;;  
+
   server)
     case "$2" in
       tomcat)
         tomcatCommand "${@:3}"
         ;;
+
       jboss|wildfly)
         jbossCommand "${@:3}"
         ;;
+
       *)
         fail "Servidor inválido."
         echo "Use: edev server tomcat|jboss start|stop|restart|status|info|list|deploy"

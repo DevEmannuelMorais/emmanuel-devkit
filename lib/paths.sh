@@ -1,11 +1,28 @@
-export EDEV_WORKSPACE="${EDEV_WORKSPACE:-$HOME/dev}"
-export EDEV_PROJECTS_DIR="${EDEV_PROJECTS_DIR:-$EDEV_WORKSPACE/projects}"
-export EDEV_APPS_DIR="${EDEV_APPS_DIR:-$HOME/apps}"
+# ============================================================
+# Paths - Emmanuel DevKit
+# ============================================================
 
-export EDEV_TOMCAT_VERSION="${EDEV_TOMCAT_VERSION:-9.0.118}"
-export EDEV_WILDFLY_VERSION="${EDEV_WILDFLY_VERSION:-26.1.3.Final}"
+: "${EDEV_CONFIG_DIR:=$HOME/.config/edev}"
+: "${EDEV_CONFIG_FILE:=$EDEV_CONFIG_DIR/config}"
 
-export EDEV_TOMCAT_HOME="${EDEV_TOMCAT_HOME:-$EDEV_APPS_DIR/tomcats/tomcat9}"
-export EDEV_WILDFLY_HOME="${EDEV_WILDFLY_HOME:-$EDEV_APPS_DIR/jbosses/wildfly26}"
-export EDEV_JDKS_HOME="${EDEV_JDKS_HOME:-$EDEV_APPS_DIR/jdks}"
-export EDEV_JAVA6_HOME="${EDEV_JAVA6_HOME:-$EDEV_JDKS_HOME/jdk6}"
+if [[ -f "$EDEV_CONFIG_FILE" ]]; then
+  source "$EDEV_CONFIG_FILE"
+fi
+
+: "${EDEV_WORKSPACE:=$HOME/dev}"
+: "${EDEV_PROJECTS_DIR:=$EDEV_WORKSPACE/projects}"
+: "${EDEV_STUDIES_DIR:=$EDEV_WORKSPACE/studies}"
+: "${EDEV_APPS_DIR:=$HOME/apps}"
+: "${EDEV_JDKS_HOME:=$EDEV_APPS_DIR/jdks}"
+
+: "${EDEV_JAVA_DEFAULT:=temurin-17}"
+
+: "${EDEV_TOMCAT_VERSION:=9.0.118}"
+: "${EDEV_WILDFLY_VERSION:=26.1.3.Final}"
+
+: "${EDEV_TOMCAT_HOME:=$EDEV_APPS_DIR/tomcats/tomcat9}"
+: "${EDEV_WILDFLY_HOME:=$EDEV_APPS_DIR/jbosses/wildfly26}"
+: "${EDEV_JAVA6_HOME:=$EDEV_JDKS_HOME/jdk6}"
+
+: "${EDEV_SHOW_BANNER:=true}"
+: "${EDEV_SHOW_TIPS:=true}"

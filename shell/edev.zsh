@@ -31,7 +31,6 @@ fi
 : "${EDEV_STUDIES_DIR:=$EDEV_WORKSPACE/studies}"
 : "${EDEV_APPS_DIR:=$HOME/apps}"
 : "${EDEV_JDKS_HOME:=$EDEV_APPS_DIR/jdks}"
-: "${EDEV_JAVA6_HOME:=$EDEV_JDKS_HOME/jdk6}"
 
 # ============================================================
 # Visual
@@ -209,141 +208,6 @@ alias esservers='edev setup servers'
 alias esall='edev setup all'
 
 # ============================================================
-# Java
-# ============================================================
-
-unalias javaInfo 2>/dev/null || true
-unalias javaList 2>/dev/null || true
-unalias javaRemote 2>/dev/null || true
-unalias javaInstall 2>/dev/null || true
-unalias javaUseGlobal 2>/dev/null || true
-unalias javaUseLocal 2>/dev/null || true
-unalias javaWhere 2>/dev/null || true
-unalias javaWhich 2>/dev/null || true
-unalias java6 2>/dev/null || true
-unalias java8 2>/dev/null || true
-unalias java11 2>/dev/null || true
-unalias java17 2>/dev/null || true
-unalias java21 2>/dev/null || true
-
-edevRemovePathEntry() {
-  local removePath="$1"
-  local currentPath
-
-  if [[ -z "$removePath" ]]; then
-    return 0
-  fi
-
-  currentPath=":$PATH:"
-  currentPath="${currentPath//:$removePath:/:}"
-  currentPath="${currentPath#:}"
-  currentPath="${currentPath%:}"
-
-  export PATH="$currentPath"
-}
-
-edevClearManualJavaPath() {
-  if [[ -n "$JAVA_HOME" ]]; then
-    edevRemovePathEntry "$JAVA_HOME/bin"
-  fi
-
-  if [[ -n "$EDEV_JAVA6_HOME" ]]; then
-    edevRemovePathEntry "$EDEV_JAVA6_HOME/bin"
-  fi
-
-  edevRemovePathEntry "$HOME/apps/jdks/jdk6/bin"
-
-  unset JAVA_HOME
-  hash -r 2>/dev/null || true
-}
-
-javaInfo() {
-  edev java info "$@"
-}
-
-javaList() {
-  edev java list
-}
-
-javaRemote() {
-  edev java remote
-}
-
-javaInstall() {
-  edev java install "$@"
-}
-
-javaUseGlobal() {
-  if [[ -z "$1" ]]; then
-    echo "❌ Informe a versão. Exemplo: javaUseGlobal temurin-17"
-    return 1
-  fi
-
-  edevClearManualJavaPath
-  edev java use-global "$1" || return 1
-  hash -r 2>/dev/null || true
-}
-
-javaUseLocal() {
-  if [[ -z "$1" ]]; then
-    echo "❌ Informe a versão. Exemplo: javaUseLocal temurin-11"
-    return 1
-  fi
-
-  edevClearManualJavaPath
-  edev java use-local "$1" || return 1
-  hash -r 2>/dev/null || true
-}
-
-javaWhere() {
-  edev java where
-}
-
-javaWhich() {
-  edev java which
-}
-
-java6() {
-  local javaHome="${EDEV_JAVA6_HOME:-$HOME/apps/jdks/jdk6}"
-
-  if [[ ! -x "$javaHome/bin/java" ]]; then
-    echo "❌ Java 6 não encontrado em: $javaHome"
-    echo "Coloque o JDK 6 nesse caminho ou crie um link simbólico."
-    echo ""
-    echo "Exemplo:"
-    echo "  mkdir -p ~/apps/jdks"
-    echo "  ln -sfn /caminho/do/jdk1.6.0_45 ~/apps/jdks/jdk6"
-    return 1
-  fi
-
-  edevClearManualJavaPath
-
-  export JAVA_HOME="$javaHome"
-  export PATH="$JAVA_HOME/bin:$PATH"
-
-  hash -r 2>/dev/null || true
-
-  echo "✅ Java 6 ativo na sessão atual:"
-  java -version
-}
-
-java8() {
-  javaUseGlobal "temurin-8"
-}
-
-java11() {
-  javaUseGlobal "temurin-11"
-}
-
-java17() {
-  javaUseGlobal "temurin-17"
-}
-
-java21() {
-  javaUseGlobal "temurin-21"
-}
-
-# ============================================================
 # Servidores
 # ============================================================
 
@@ -417,6 +281,59 @@ studies() {
 }
 
 # ============================================================
+# Java
+# ============================================================
+
+unfunction javaInfo 2>/dev/null || true
+unfunction javaList 2>/dev/null || true
+unfunction javaRemote 2>/dev/null || true
+unfunction javaInstall 2>/dev/null || true
+unfunction javaUseGlobal 2>/dev/null || true
+unfunction javaUseLocal 2>/dev/null || true
+unfunction javaWhere 2>/dev/null || true
+unfunction javaWhich 2>/dev/null || true
+unfunction java6 2>/dev/null || true
+unfunction java8 2>/dev/null || true
+unfunction java11 2>/dev/null || true
+unfunction java17 2>/dev/null || true
+unfunction java21 2>/dev/null || true
+
+unalias javaInfo 2>/dev/null || true
+unalias javaList 2>/dev/null || true
+unalias javaRemote 2>/dev/null || true
+unalias javaInstall 2>/dev/null || true
+unalias javaUseGlobal 2>/dev/null || true
+unalias javaUseLocal 2>/dev/null || true
+unalias javaWhere 2>/dev/null || true
+unalias javaWhich 2>/dev/null || true
+unalias java6 2>/dev/null || true
+unalias java8 2>/dev/null || true
+unalias java11 2>/dev/null || true
+unalias java17 2>/dev/null || true
+unalias java21 2>/dev/null || true
+
+alias javaInfo='edev java info'
+alias javaList='edev java list'
+alias javaRemote='edev java remote'
+alias javaInstall='edev java install'
+alias javaUseGlobal='edev java use-global'
+alias javaUseLocal='edev java use-local'
+alias javaWhere='edev java where'
+alias javaWhich='edev java which'
+
+alias java6='edev java 6'
+alias java8='edev java 8'
+alias java11='edev java 11'
+alias java17='edev java 17'
+alias java21='edev java 21'
+
+alias mavenInfo='edev maven info'
+alias mavenInstall='edev maven install'
+alias mavenUse='edev maven use'
+alias maven6='edev maven 6'
+alias maven39='edev maven 39'
+
+# ============================================================
 # Git / Docker
 # ============================================================
 
@@ -433,6 +350,34 @@ alias dcu='docker compose up -d'
 alias dcd='docker compose down'
 alias dcl='docker compose logs -f --tail=100'
 alias dps='docker ps'
+
+# ============================================================
+# Maven
+# ============================================================
+
+unfunction mavenInfo 2>/dev/null || true
+unfunction mavenList 2>/dev/null || true
+unfunction mavenRemote 2>/dev/null || true
+unfunction mavenInstall 2>/dev/null || true
+unfunction mavenUse 2>/dev/null || true
+unfunction maven6 2>/dev/null || true
+unfunction maven39 2>/dev/null || true
+
+unalias mavenInfo 2>/dev/null || true
+unalias mavenList 2>/dev/null || true
+unalias mavenRemote 2>/dev/null || true
+unalias mavenInstall 2>/dev/null || true
+unalias mavenUse 2>/dev/null || true
+unalias maven6 2>/dev/null || true
+unalias maven39 2>/dev/null || true
+
+alias mavenInfo='edev maven info'
+alias mavenList='edev maven list'
+alias mavenRemote='edev maven remote'
+alias mavenInstall='edev maven install'
+alias mavenUse='edev maven use'
+alias maven6='edev maven 6'
+alias maven39='edev maven 39'
 
 # ============================================================
 # Ajuda
@@ -482,6 +427,16 @@ edevAliases() {
   echo "  jblog    → log"
   echo "  jbd      → deploy"
   echo "  jbds     → testar datasource"
+  echo ""
+  echo "Maven:"
+  echo "  mavenInfo"
+  echo "  mavenList"
+  echo "  mavenRemote"
+  echo "  mavenInstall 3.2.5"
+  echo "  mavenUse 3.9.16"
+  echo "  maven6"
+  echo "  maven39"
+  echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 }
