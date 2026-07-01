@@ -20,12 +20,13 @@ if grep -q "$START_MARK" "$RC_FILE" 2>/dev/null; then
   echo "Emmanuel DevKit já está configurado em $RC_FILE"
 else
   {
-    echo ""
-    echo "$START_MARK"
-    echo "export EDEV_HOME=\"$PROJECT_DIR\""
-    echo "export PATH=\"\$EDEV_HOME/bin:\$PATH\""
-    echo "$END_MARK"
-  } >> "$RC_FILE"
+  echo ""
+  echo "$START_MARK"
+  echo "export EDEV_HOME=\"$PROJECT_DIR\""
+  echo "export PATH=\"\$EDEV_HOME/bin:\$PATH\""
+  echo "[[ -f \"\$EDEV_HOME/shell/edev.zsh\" ]] && source \"\$EDEV_HOME/shell/edev.zsh\""
+  echo "$END_MARK"
+} >> "$RC_FILE"
 
   echo "Emmanuel DevKit instalado em $RC_FILE"
 fi
