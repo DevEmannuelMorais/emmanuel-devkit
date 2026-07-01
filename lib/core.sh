@@ -56,6 +56,11 @@ edevHelp() {
   echo "  edev server jboss start         Inicia WildFly/JBoss"
   echo "  edev server jboss stop          Para WildFly/JBoss"
   echo "  edev server jboss log           Mostra log WildFly/JBoss"
+  echo "  edev server tomcat deploy        Deploy do projeto atual no Tomcat"
+  echo "  edev server jboss deploy         Deploy do projeto atual no WildFly/JBoss"
+  echo ""
+  echo "Project:"
+  echo "  edev project info               Mostra informacoes do projeto atual"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 }

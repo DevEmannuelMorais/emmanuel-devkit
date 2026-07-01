@@ -2,8 +2,6 @@
 # Servers - Tomcat / WildFly JBoss
 # ============================================================
 
-: "${EDEV_APP_NAME:=cliente-legado}"
-: "${EDEV_PROJECT_DIR:=$HOME/dev/projects/java/$EDEV_APP_NAME}"
 : "${EDEV_APPS_DIR:=$HOME/apps}"
 : "${EDEV_TOMCAT_VERSION:=9.0.118}"
 : "${EDEV_WILDFLY_VERSION:=26.1.3.Final}"
@@ -262,7 +260,7 @@ tomcatCommand() {
       ;;
 
     deploy)
-      tomcatDeploy
+      tomcatDeploy "$2"
       ;;
 
     clean-deploy)
@@ -356,18 +354,34 @@ tomcatPort() {
   lsof -i :8082 || true
 }
 
-tomcatCleanDeploy() {
-  log "Removendo deploy anterior do Tomcat..."
+tomcatCleanDeployName() {
+  local appName="$1"
 
-  rm -rf "$EDEV_TOMCAT_HOME/webapps/$EDEV_APP_NAME"
-  rm -f "$EDEV_TOMCAT_HOME/webapps/$EDEV_APP_NAME.war"
+  if [[ -z "$appName" ]]; then
+    fail "Nome da aplicacao nao informado para limpar deploy."
+    return 1
+  fi
+
+  log "Removendo deploy anterior do Tomcat: $appName"
+
+  rm -rf "$EDEV_TOMCAT_HOME/webapps/$appName"
+  rm -f "$EDEV_TOMCAT_HOME/webapps/$appName.war"
 
   ok "Deploy anterior removido."
 }
 
+tomcatCleanDeploy() {
+  projectResolveCurrent "$1" || return 1
+  tomcatCleanDeployName "$EDEV_PROJECT_ARTIFACT_NAME"
+}
+
 tomcatDeploy() {
-  if [[ ! -d "$EDEV_PROJECT_DIR" ]]; then
-    fail "Projeto nao encontrado: $EDEV_PROJECT_DIR"
+  local projectPath="${1:-$(pwd)}"
+
+  projectResolveCurrent "$projectPath" || return 1
+
+  if [[ "$EDEV_PROJECT_PACKAGING" != "war" ]]; then
+    fail "Deploy no Tomcat espera projeto WAR. Packaging atual: $EDEV_PROJECT_PACKAGING"
     return 1
   fi
 
@@ -377,19 +391,28 @@ tomcatDeploy() {
   fi
 
   log "Gerando WAR do projeto..."
-  cd "$EDEV_PROJECT_DIR" || return 1
+  cd "$EDEV_PROJECT_ROOT" || return 1
 
   mvn clean package
 
+  projectResolveCurrent "$EDEV_PROJECT_ROOT" || return 1
+
+  if [[ ! -f "$EDEV_PROJECT_ARTIFACT_FILE" ]]; then
+    fail "WAR nao encontrado em target."
+    return 1
+  fi
+
   tomcatStop
-  tomcatCleanDeploy
+  tomcatCleanDeployName "$EDEV_PROJECT_ARTIFACT_NAME"
 
   log "Copiando WAR para Tomcat..."
-  cp "$EDEV_PROJECT_DIR/target/$EDEV_APP_NAME.war" "$EDEV_TOMCAT_HOME/webapps/"
+  cp "$EDEV_PROJECT_ARTIFACT_FILE" "$EDEV_TOMCAT_HOME/webapps/"
 
   tomcatStart
 
   ok "Deploy enviado para Tomcat."
+  echo "Aplicacao: $EDEV_PROJECT_ARTIFACT_NAME"
+  echo "Arquivo:    $EDEV_PROJECT_ARTIFACT_FILE"
   tomcatLog80
 }
 
@@ -622,7 +645,7 @@ jbossCommand() {
       ;;
 
     deploy)
-      jbossDeploy
+      jbossDeploy "$2"
       ;;
 
     clean-deploy)
@@ -788,31 +811,45 @@ jbossDeployments() {
   ls -la "$deployDir"
 }
 
-jbossCleanDeploy() {
+jbossCleanDeployName() {
+  local appName="$1"
   local deployDir="$EDEV_WILDFLY_HOME/standalone/deployments"
+
+  if [[ -z "$appName" ]]; then
+    fail "Nome da aplicacao nao informado para limpar deploy."
+    return 1
+  fi
 
   if [[ ! -d "$deployDir" ]]; then
     fail "Diretorio de deployments nao encontrado: $deployDir"
     return 1
   fi
 
-  log "Removendo deploy anterior do WildFly/JBoss..."
+  log "Removendo deploy anterior do WildFly/JBoss: $appName"
 
-  rm -f "$deployDir/$EDEV_APP_NAME.war"
-  rm -f "$deployDir/$EDEV_APP_NAME.war.deployed"
-  rm -f "$deployDir/$EDEV_APP_NAME.war.failed"
-  rm -f "$deployDir/$EDEV_APP_NAME.war.isdeploying"
-  rm -f "$deployDir/$EDEV_APP_NAME.war.undeployed"
-  rm -f "$deployDir/$EDEV_APP_NAME.war.dodeploy"
+  rm -f "$deployDir/$appName.war"
+  rm -f "$deployDir/$appName.war.deployed"
+  rm -f "$deployDir/$appName.war.failed"
+  rm -f "$deployDir/$appName.war.isdeploying"
+  rm -f "$deployDir/$appName.war.undeployed"
+  rm -f "$deployDir/$appName.war.dodeploy"
 
   ok "Deploy anterior removido."
 }
 
+jbossCleanDeploy() {
+  projectResolveCurrent "$1" || return 1
+  jbossCleanDeployName "$EDEV_PROJECT_ARTIFACT_NAME"
+}
+
 jbossDeploy() {
+  local projectPath="${1:-$(pwd)}"
   local deployDir="$EDEV_WILDFLY_HOME/standalone/deployments"
 
-  if [[ ! -d "$EDEV_PROJECT_DIR" ]]; then
-    fail "Projeto nao encontrado: $EDEV_PROJECT_DIR"
+  projectResolveCurrent "$projectPath" || return 1
+
+  if [[ "$EDEV_PROJECT_PACKAGING" != "war" ]]; then
+    fail "Deploy no WildFly/JBoss espera projeto WAR. Packaging atual: $EDEV_PROJECT_PACKAGING"
     return 1
   fi
 
@@ -822,16 +859,25 @@ jbossDeploy() {
   fi
 
   log "Gerando WAR do projeto..."
-  cd "$EDEV_PROJECT_DIR" || return 1
+  cd "$EDEV_PROJECT_ROOT" || return 1
 
   mvn clean package
 
-  jbossCleanDeploy
+  projectResolveCurrent "$EDEV_PROJECT_ROOT" || return 1
+
+  if [[ ! -f "$EDEV_PROJECT_ARTIFACT_FILE" ]]; then
+    fail "WAR nao encontrado em target."
+    return 1
+  fi
+
+  jbossCleanDeployName "$EDEV_PROJECT_ARTIFACT_NAME"
 
   log "Copiando WAR para WildFly/JBoss..."
-  cp "$EDEV_PROJECT_DIR/target/$EDEV_APP_NAME.war" "$deployDir/"
+  cp "$EDEV_PROJECT_ARTIFACT_FILE" "$deployDir/"
 
   ok "Deploy enviado para WildFly/JBoss."
+  echo "Aplicacao: $EDEV_PROJECT_ARTIFACT_NAME"
+  echo "Arquivo:    $EDEV_PROJECT_ARTIFACT_FILE"
   jbossLog80
 }
 

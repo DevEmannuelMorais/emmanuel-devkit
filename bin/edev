@@ -13,6 +13,7 @@ source "$EDEV_HOME/lib/node.sh"
 source "$EDEV_HOME/lib/servers.sh"
 source "$EDEV_HOME/lib/update.sh"
 source "$EDEV_HOME/lib/migrations.sh"
+source "$EDEV_HOME/lib/project.sh"
 
 case "$1" in
   help|"")
@@ -29,6 +30,10 @@ case "$1" in
 
   migrate)
     edevMigrate
+  ;;
+
+  project)
+    projectCommand "${@:2}" 
   ;;    
 
   doctor)
@@ -96,7 +101,7 @@ case "$1" in
         ;;
       *)
         fail "Servidor inválido."
-        echo "Use: edev server tomcat|jboss start|stop|log"
+        echo "Use: edev server tomcat|jboss start|stop|restart|status|info|list|deploy"
         exit 1
         ;;
     esac
