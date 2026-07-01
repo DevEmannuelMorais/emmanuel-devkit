@@ -31,6 +31,8 @@ edevHelp() {
   echo "🚀 Emmanuel DevKit - edev"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "edev help                         Mostra ajuda"
+  echo "edev version                      Mostra versao instalada"
+  echo "edev update                       Atualiza o DevKit via git pull"
   echo "edev doctor                       Verifica ambiente"
   echo ""
   echo "Setup:"

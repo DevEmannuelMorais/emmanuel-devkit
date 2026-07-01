@@ -11,11 +11,20 @@ source "$EDEV_HOME/lib/ubuntu.sh"
 source "$EDEV_HOME/lib/java.sh"
 source "$EDEV_HOME/lib/node.sh"
 source "$EDEV_HOME/lib/servers.sh"
+source "$EDEV_HOME/lib/update.sh"
 
 case "$1" in
   help|"")
     edevHelp
     ;;
+
+  version)
+    edevVersion
+    ;;
+
+  update)
+    edevUpdate
+  ;;    
 
   doctor)
     edevDoctor
