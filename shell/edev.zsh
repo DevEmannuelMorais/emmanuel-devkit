@@ -68,8 +68,8 @@ edevCompactInfo() {
   echo "Workspace: $EDEV_WORKSPACE"
   echo "Projetos:  $EDEV_PROJECTS_DIR"
   echo "Estudos:   $EDEV_STUDIES_DIR"
-  echo "Comando:   edev help"
-  echo "Atalhos:   eh"
+  echo "🧰 Help:    eh | edev help"
+  echo "⚡ Atalhos: atalhos"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 }
@@ -268,7 +268,7 @@ edevAliases() {
   echo ""
 }
 
-alias ea='edevAliases'
+alias atalhos='edevAliases'
 
 # ============================================================
 # Banner ao abrir terminal
