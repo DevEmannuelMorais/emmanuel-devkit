@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+set -e
+
+EDEV_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+source "$EDEV_HOME/lib/core.sh"
+source "$EDEV_HOME/lib/prompts.sh"
+source "$EDEV_HOME/lib/paths.sh"
+source "$EDEV_HOME/lib/ubuntu.sh"
+source "$EDEV_HOME/lib/java.sh"
+source "$EDEV_HOME/lib/node.sh"
+source "$EDEV_HOME/lib/servers.sh"
+
+case "$1" in
+  help|"")
+    edevHelp
+    ;;
+
+  doctor)
+    edevDoctor
+    ;;
+
+  setup)
+    case "$2" in
+      base)
+        setupBase
+        ;;
+      node)
+        setupNode
+        ;;
+      java-legacy)
+        setupJavaLegacy
+        ;;
+      java-modern)
+        setupJavaModern
+        ;;
+      servers)
+        setupServers
+        ;;
+      all|"")
+        setupBase
+        setupNode
+        setupJavaLegacy
+        setupJavaModern
+        setupServers
+        ;;
+      *)
+        fail "Setup inválido: $2"
+        echo "Use: edev setup base|node|java-legacy|java-modern|servers|all"
+        exit 1
+        ;;
+    esac
+    ;;
+
+  java)
+    case "$2" in
+      info)
+        javaInfo
+        ;;
+      use)
+        javaUse "$3"
+        ;;
+      install)
+        javaInstall "$3"
+        ;;
+      *)
+        fail "Comando Java inválido."
+        echo "Use: edev java info|use|install"
+        exit 1
+        ;;
+    esac
+    ;;
+
+  server)
+    case "$2" in
+      tomcat)
+        tomcatCommand "$3"
+        ;;
+      jboss|wildfly)
+        jbossCommand "$3"
+        ;;
+      *)
+        fail "Servidor inválido."
+        echo "Use: edev server tomcat|jboss start|stop|log"
+        exit 1
+        ;;
+    esac
+    ;;
+
+  *)
+    fail "Comando inválido: $1"
+    echo "Use: edev help"
+    exit 1
+    ;;
+esac
