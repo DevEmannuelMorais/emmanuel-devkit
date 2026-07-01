@@ -75,10 +75,10 @@ case "$1" in
   server)
     case "$2" in
       tomcat)
-        tomcatCommand "$3"
+        tomcatCommand "${@:3}"
         ;;
       jboss|wildfly)
-        jbossCommand "$3"
+        jbossCommand "${@:3}"
         ;;
       *)
         fail "Servidor inválido."

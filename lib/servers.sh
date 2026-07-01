@@ -4,6 +4,11 @@
 
 : "${EDEV_APP_NAME:=cliente-legado}"
 : "${EDEV_PROJECT_DIR:=$HOME/dev/projects/java/$EDEV_APP_NAME}"
+: "${EDEV_APPS_DIR:=$HOME/apps}"
+: "${EDEV_TOMCAT_VERSION:=9.0.118}"
+: "${EDEV_WILDFLY_VERSION:=26.1.3.Final}"
+: "${EDEV_TOMCAT_HOME:=$EDEV_APPS_DIR/tomcats/tomcat9}"
+: "${EDEV_WILDFLY_HOME:=$EDEV_APPS_DIR/jbosses/wildfly26}"
 
 setupServers() {
   setupBase
@@ -17,82 +22,197 @@ setupServers() {
   ok "Servidores configurados."
 }
 
+getRealPath() {
+  local path="$1"
+
+  readlink -f "$path" 2>/dev/null || echo "$path"
+}
+
+getDirectoryName() {
+  local path="$1"
+  local realPath
+
+  realPath="$(getRealPath "$path")"
+
+  basename "$realPath"
+}
+
+showProcessPorts() {
+  local searchPath="$1"
+  local pids
+
+  pids="$(pgrep -f "$searchPath" || true)"
+
+  if [[ -z "$pids" ]]; then
+    warn "Nenhum processo encontrado para: $searchPath"
+    return 0
+  fi
+
+  echo "Processos encontrados:"
+
+  while IFS= read -r pid; do
+    if [[ -z "$pid" ]]; then
+      continue
+    fi
+
+    echo "  PID: $pid"
+
+    local ports
+    ports="$(lsof -Pan -p "$pid" -iTCP -sTCP:LISTEN 2>/dev/null | awk 'NR > 1 {print $9}' | sort -u || true)"
+
+    if [[ -z "$ports" ]]; then
+      warn "  Nenhuma porta TCP LISTEN encontrada para o PID $pid."
+    else
+      echo "$ports" | while IFS= read -r port; do
+        echo "    Porta aberta: $port"
+      done
+    fi
+  done <<< "$pids"
+}
+
+# ============================================================
+# Tomcat
+# ============================================================
+
 installTomcat() {
-  if [[ -d "$EDEV_TOMCAT_HOME" ]]; then
-    ok "Tomcat ja instalado em: $EDEV_TOMCAT_HOME"
-    return 0
+  installTomcatVersion "$EDEV_TOMCAT_VERSION"
+}
+
+installTomcatVersion() {
+  local version="$1"
+
+  if [[ -z "$version" ]]; then
+    fail "Informe a versao do Tomcat. Exemplo: edev server tomcat install-version 9.0.118"
+    return 1
   fi
 
-  if ! confirm "Deseja baixar e instalar o Tomcat $EDEV_TOMCAT_VERSION?"; then
-    warn "Tomcat nao instalado."
-    return 0
-  fi
+  local majorVersion
+  majorVersion="${version%%.*}"
 
-  local fileName="apache-tomcat-$EDEV_TOMCAT_VERSION.tar.gz"
-  local url="https://archive.apache.org/dist/tomcat/tomcat-9/v$EDEV_TOMCAT_VERSION/bin/$fileName"
+  local fileName="apache-tomcat-$version.tar.gz"
+  local url="https://archive.apache.org/dist/tomcat/tomcat-$majorVersion/v$version/bin/$fileName"
   local installDir="$EDEV_APPS_DIR/tomcats"
+  local versionDir="$installDir/apache-tomcat-$version"
+
+  if [[ -d "$versionDir" ]]; then
+    ok "Tomcat $version ja instalado em: $versionDir"
+    return 0
+  fi
+
+  if ! confirm "Deseja baixar e instalar o Tomcat $version?"; then
+    warn "Tomcat $version nao instalado."
+    return 0
+  fi
 
   mkdir -p "$installDir"
 
   cd "$installDir" || return 1
 
   if [[ ! -f "$fileName" ]]; then
-    log "Baixando Tomcat..."
+    log "Baixando Tomcat $version..."
     wget "$url"
   else
     ok "Arquivo do Tomcat ja existe: $fileName"
   fi
 
-  if [[ ! -d "apache-tomcat-$EDEV_TOMCAT_VERSION" ]]; then
-    log "Extraindo Tomcat..."
-    tar -xzf "$fileName"
-  else
-    ok "Diretorio do Tomcat ja existe."
+  log "Extraindo Tomcat $version..."
+  tar -xzf "$fileName"
+
+  chmod +x "$versionDir/bin/"*.sh
+
+  ok "Tomcat $version instalado em: $versionDir"
+
+  if confirm "Deseja usar o Tomcat $version como versao ativa?"; then
+    tomcatUseVersion "$version"
   fi
-
-  ln -sfn "apache-tomcat-$EDEV_TOMCAT_VERSION" tomcat9
-  chmod +x "$EDEV_TOMCAT_HOME/bin/"*.sh
-
-  ok "Tomcat instalado em: $EDEV_TOMCAT_HOME"
 }
 
-installWildFly() {
-  if [[ -d "$EDEV_WILDFLY_HOME" ]]; then
-    ok "WildFly/JBoss ja instalado em: $EDEV_WILDFLY_HOME"
+tomcatUseVersion() {
+  local version="$1"
+
+  if [[ -z "$version" ]]; then
+    fail "Informe a versao do Tomcat. Exemplo: edev server tomcat use-version 9.0.118"
+    return 1
+  fi
+
+  local versionDir="$EDEV_APPS_DIR/tomcats/apache-tomcat-$version"
+
+  if [[ ! -d "$versionDir" ]]; then
+    fail "Tomcat $version nao encontrado em: $versionDir"
+    warn "Instale antes com: edev server tomcat install-version $version"
+    return 1
+  fi
+
+  if [[ -e "$EDEV_TOMCAT_HOME" && ! -L "$EDEV_TOMCAT_HOME" ]]; then
+    fail "O caminho ativo do Tomcat existe e nao e link simbolico: $EDEV_TOMCAT_HOME"
+    warn "Nao vou sobrescrever uma pasta real automaticamente."
+    return 1
+  fi
+
+  ln -sfn "$versionDir" "$EDEV_TOMCAT_HOME"
+
+  ok "Tomcat ativo alterado para: $version"
+  tomcatInfo
+}
+
+tomcatList() {
+  local tomcatDir="$EDEV_APPS_DIR/tomcats"
+
+  if [[ ! -d "$tomcatDir" ]]; then
+    warn "Diretorio de Tomcats nao encontrado: $tomcatDir"
     return 0
   fi
 
-  if ! confirm "Deseja baixar e instalar o WildFly $EDEV_WILDFLY_VERSION?"; then
-    warn "WildFly/JBoss nao instalado."
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🐱 Tomcats instalados"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  find "$tomcatDir" -maxdepth 1 -type d -name "apache-tomcat-*" -printf "  %f\n" | sort
+
+  echo ""
+  echo "Ativo:"
+  echo "  $EDEV_TOMCAT_HOME -> $(getRealPath "$EDEV_TOMCAT_HOME")"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+}
+
+tomcatConfiguredPorts() {
+  local configFile="$EDEV_TOMCAT_HOME/conf/server.xml"
+
+  if [[ ! -f "$configFile" ]]; then
+    warn "server.xml nao encontrado: $configFile"
     return 0
   fi
 
-  local fileName="wildfly-$EDEV_WILDFLY_VERSION.tar.gz"
-  local url="https://github.com/wildfly/wildfly/releases/download/$EDEV_WILDFLY_VERSION/$fileName"
-  local installDir="$EDEV_APPS_DIR/jbosses"
+  echo "Portas configuradas no server.xml:"
 
-  mkdir -p "$installDir"
+  grep -E '<Connector port=' "$configFile" \
+    | sed -E 's/.*port="([^"]+)".*/  Porta configurada: \1/' \
+    | sort -u
+}
 
-  cd "$installDir" || return 1
+tomcatInfo() {
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🐱 Tomcat Info"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "Home:       $EDEV_TOMCAT_HOME"
+  echo "Real path:  $(getRealPath "$EDEV_TOMCAT_HOME")"
+  echo "Versao dir: $(getDirectoryName "$EDEV_TOMCAT_HOME")"
+  echo ""
 
-  if [[ ! -f "$fileName" ]]; then
-    log "Baixando WildFly/JBoss..."
-    wget "$url"
-  else
-    ok "Arquivo do WildFly/JBoss ja existe: $fileName"
+  if [[ -x "$EDEV_TOMCAT_HOME/bin/version.sh" ]]; then
+    "$EDEV_TOMCAT_HOME/bin/version.sh" 2>/dev/null \
+      | grep -E "Server version|Server number|JVM Version" || true
   fi
 
-  if [[ ! -d "wildfly-$EDEV_WILDFLY_VERSION" ]]; then
-    log "Extraindo WildFly/JBoss..."
-    tar -xzf "$fileName"
-  else
-    ok "Diretorio do WildFly/JBoss ja existe."
-  fi
-
-  ln -sfn "wildfly-$EDEV_WILDFLY_VERSION" wildfly26
-  chmod +x "$EDEV_WILDFLY_HOME/bin/"*.sh
-
-  ok "WildFly/JBoss instalado em: $EDEV_WILDFLY_HOME"
+  echo ""
+  tomcatConfiguredPorts
+  echo ""
+  tomcatStatus
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
 }
 
 tomcatCommand() {
@@ -111,6 +231,22 @@ tomcatCommand() {
 
     status)
       tomcatStatus
+      ;;
+
+    info)
+      tomcatInfo
+      ;;
+
+    list)
+      tomcatList
+      ;;
+
+    install-version)
+      tomcatInstallVersion "$2"
+      ;;
+
+    use-version)
+      tomcatUseVersion "$2"
       ;;
 
     log)
@@ -139,7 +275,7 @@ tomcatCommand() {
 
     *)
       fail "Comando Tomcat invalido."
-      echo "Use: edev server tomcat start|stop|restart|status|log|log80|port|deploy|clean-deploy|kill"
+      echo "Use: edev server tomcat start|stop|restart|status|info|list|install-version|use-version|log|log80|port|deploy|clean-deploy|kill"
       return 1
       ;;
   esac
@@ -153,7 +289,11 @@ tomcatStart() {
 
   log "Iniciando Tomcat..."
   "$EDEV_TOMCAT_HOME/bin/startup.sh"
+
+  sleep 2
+
   ok "Tomcat iniciado."
+  tomcatStatus
 }
 
 tomcatStop() {
@@ -164,6 +304,9 @@ tomcatStop() {
 
   log "Parando Tomcat..."
   "$EDEV_TOMCAT_HOME/bin/shutdown.sh" || true
+
+  sleep 2
+
   ok "Tomcat parado."
 }
 
@@ -177,6 +320,7 @@ tomcatRestart() {
 tomcatStatus() {
   if pgrep -f "$EDEV_TOMCAT_HOME" >/dev/null 2>&1; then
     ok "Tomcat esta rodando."
+    showProcessPorts "$EDEV_TOMCAT_HOME"
     return 0
   fi
 
@@ -206,8 +350,10 @@ tomcatLog80() {
 }
 
 tomcatPort() {
-  log "Verificando porta 8080..."
-  lsof -i :8080 || warn "Nada encontrado na porta 8080."
+  log "Verificando portas comuns do Tomcat..."
+  lsof -i :8080 || true
+  lsof -i :8081 || true
+  lsof -i :8082 || true
 }
 
 tomcatCleanDeploy() {
@@ -253,6 +399,154 @@ tomcatKill() {
   ok "Processos Tomcat finalizados."
 }
 
+# ============================================================
+# WildFly / JBoss
+# ============================================================
+
+installWildFly() {
+  installWildFlyVersion "$EDEV_WILDFLY_VERSION"
+}
+
+installWildFlyVersion() {
+  local version="$1"
+
+  if [[ -z "$version" ]]; then
+    fail "Informe a versao do WildFly. Exemplo: edev server jboss install-version 26.1.3.Final"
+    return 1
+  fi
+
+  local fileName="wildfly-$version.tar.gz"
+  local url="https://github.com/wildfly/wildfly/releases/download/$version/$fileName"
+  local installDir="$EDEV_APPS_DIR/jbosses"
+  local versionDir="$installDir/wildfly-$version"
+
+  if [[ -d "$versionDir" ]]; then
+    ok "WildFly/JBoss $version ja instalado em: $versionDir"
+    return 0
+  fi
+
+  if ! confirm "Deseja baixar e instalar o WildFly $version?"; then
+    warn "WildFly/JBoss $version nao instalado."
+    return 0
+  fi
+
+  mkdir -p "$installDir"
+
+  cd "$installDir" || return 1
+
+  if [[ ! -f "$fileName" ]]; then
+    log "Baixando WildFly/JBoss $version..."
+    wget "$url"
+  else
+    ok "Arquivo do WildFly/JBoss ja existe: $fileName"
+  fi
+
+  log "Extraindo WildFly/JBoss $version..."
+  tar -xzf "$fileName"
+
+  chmod +x "$versionDir/bin/"*.sh
+
+  ok "WildFly/JBoss $version instalado em: $versionDir"
+
+  if confirm "Deseja usar o WildFly/JBoss $version como versao ativa?"; then
+    jbossUseVersion "$version"
+  fi
+}
+
+jbossUseVersion() {
+  local version="$1"
+
+  if [[ -z "$version" ]]; then
+    fail "Informe a versao do WildFly. Exemplo: edev server jboss use-version 26.1.3.Final"
+    return 1
+  fi
+
+  local versionDir="$EDEV_APPS_DIR/jbosses/wildfly-$version"
+
+  if [[ ! -d "$versionDir" ]]; then
+    fail "WildFly/JBoss $version nao encontrado em: $versionDir"
+    warn "Instale antes com: edev server jboss install-version $version"
+    return 1
+  fi
+
+  if [[ -e "$EDEV_WILDFLY_HOME" && ! -L "$EDEV_WILDFLY_HOME" ]]; then
+    fail "O caminho ativo do WildFly/JBoss existe e nao e link simbolico: $EDEV_WILDFLY_HOME"
+    warn "Nao vou sobrescrever uma pasta real automaticamente."
+    return 1
+  fi
+
+  ln -sfn "$versionDir" "$EDEV_WILDFLY_HOME"
+
+  ok "WildFly/JBoss ativo alterado para: $version"
+  jbossInfo
+}
+
+jbossList() {
+  local jbossDir="$EDEV_APPS_DIR/jbosses"
+
+  if [[ ! -d "$jbossDir" ]]; then
+    warn "Diretorio de WildFly/JBoss nao encontrado: $jbossDir"
+    return 0
+  fi
+
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🦅 WildFly/JBoss instalados"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  find "$jbossDir" -maxdepth 1 -type d -name "wildfly-*" -printf "  %f\n" | sort
+
+  echo ""
+  echo "Ativo:"
+  echo "  $EDEV_WILDFLY_HOME -> $(getRealPath "$EDEV_WILDFLY_HOME")"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+}
+
+jbossConfiguredPorts() {
+  local configFile="$EDEV_WILDFLY_HOME/standalone/configuration/standalone.xml"
+
+  if [[ ! -f "$configFile" ]]; then
+    warn "standalone.xml nao encontrado: $configFile"
+    return 0
+  fi
+
+  echo "Portas configuradas no standalone.xml:"
+
+  local httpPort
+  local httpsPort
+  local managementPort
+
+  httpPort="$(grep -oE 'jboss.http.port:[0-9]+' "$configFile" | head -n1 | cut -d: -f2)"
+  httpsPort="$(grep -oE 'jboss.https.port:[0-9]+' "$configFile" | head -n1 | cut -d: -f2)"
+  managementPort="$(grep -oE 'jboss.management.http.port:[0-9]+' "$configFile" | head -n1 | cut -d: -f2)"
+
+  [[ -n "$httpPort" ]] && echo "  HTTP:       $httpPort"
+  [[ -n "$httpsPort" ]] && echo "  HTTPS:      $httpsPort"
+  [[ -n "$managementPort" ]] && echo "  Management: $managementPort"
+
+  if [[ -z "$httpPort" && -z "$httpsPort" && -z "$managementPort" ]]; then
+    warn "Nao foi possivel identificar portas no standalone.xml."
+  fi
+}
+
+jbossInfo() {
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🦅 WildFly/JBoss Info"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "Home:       $EDEV_WILDFLY_HOME"
+  echo "Real path:  $(getRealPath "$EDEV_WILDFLY_HOME")"
+  echo "Versao dir: $(getDirectoryName "$EDEV_WILDFLY_HOME")"
+  echo ""
+
+  jbossConfiguredPorts
+  echo ""
+  jbossStatus
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+}
+
 jbossCommand() {
   case "$1" in
     start)
@@ -271,6 +565,14 @@ jbossCommand() {
       jbossStartPort "8082"
       ;;
 
+    start-bg-8081)
+      jbossStartBackgroundPort "8081"
+      ;;
+
+    start-bg-8082)
+      jbossStartBackgroundPort "8082"
+      ;;
+
     stop)
       jbossStop
       ;;
@@ -281,6 +583,22 @@ jbossCommand() {
 
     status)
       jbossStatus
+      ;;
+
+    info)
+      jbossInfo
+      ;;
+
+    list)
+      jbossList
+      ;;
+
+    install-version)
+      installWildFlyVersion "$2"
+      ;;
+
+    use-version)
+      jbossUseVersion "$2"
       ;;
 
     log)
@@ -321,7 +639,7 @@ jbossCommand() {
 
     *)
       fail "Comando WildFly/JBoss invalido."
-      echo "Use: edev server jboss start|start-bg|start-8081|start-8082|stop|restart|status|log|log80|port|management-port|deployments|deploy|clean-deploy|test-ds|kill"
+      echo "Use: edev server jboss start|start-bg|start-8081|start-8082|start-bg-8081|start-bg-8082|stop|restart|status|info|list|install-version|use-version|log|log80|port|management-port|deployments|deploy|clean-deploy|test-ds|kill"
       return 1
       ;;
   esac
@@ -348,10 +666,11 @@ jbossStartBackground() {
   log "Iniciando WildFly/JBoss em background..."
   nohup "$EDEV_WILDFLY_HOME/bin/standalone.sh" > "$consoleLog" 2>&1 &
 
-  sleep 2
+  sleep 4
 
   ok "WildFly/JBoss iniciado em background."
   warn "Log do console: $consoleLog"
+  jbossStatus
 }
 
 jbossStartPort() {
@@ -369,6 +688,31 @@ jbossStartPort() {
 
   log "Iniciando WildFly/JBoss na porta $port..."
   "$EDEV_WILDFLY_HOME/bin/standalone.sh" -Djboss.http.port="$port"
+}
+
+jbossStartBackgroundPort() {
+  local port="$1"
+
+  if [[ -z "$port" ]]; then
+    fail "Porta nao informada."
+    return 1
+  fi
+
+  if [[ ! -x "$EDEV_WILDFLY_HOME/bin/standalone.sh" ]]; then
+    fail "WildFly/JBoss nao encontrado em: $EDEV_WILDFLY_HOME"
+    return 1
+  fi
+
+  local consoleLog="$EDEV_WILDFLY_HOME/standalone/log/console.log"
+
+  log "Iniciando WildFly/JBoss em background na porta $port..."
+  nohup "$EDEV_WILDFLY_HOME/bin/standalone.sh" -Djboss.http.port="$port" > "$consoleLog" 2>&1 &
+
+  sleep 4
+
+  ok "WildFly/JBoss iniciado em background na porta $port."
+  warn "Log do console: $consoleLog"
+  jbossStatus
 }
 
 jbossStop() {
@@ -392,6 +736,7 @@ jbossRestart() {
 jbossStatus() {
   if pgrep -f "$EDEV_WILDFLY_HOME" >/dev/null 2>&1; then
     ok "WildFly/JBoss esta rodando."
+    showProcessPorts "$EDEV_WILDFLY_HOME"
     return 0
   fi
 
