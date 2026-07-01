@@ -70,6 +70,9 @@ edevUpdate() {
   chmod +x "$EDEV_HOME/install.sh" 2>/dev/null || true
   chmod +x "$EDEV_HOME/uninstall.sh" 2>/dev/null || true
 
+  log "Executando migrations..."
+  "$EDEV_HOME/bin/edev" migrate || warn "Nao foi possivel executar migrations automaticamente."
+
   ok "Emmanuel DevKit atualizado com sucesso."
   edevVersion
 

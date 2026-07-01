@@ -33,6 +33,7 @@ edevHelp() {
   echo "edev help                         Mostra ajuda"
   echo "edev version                      Mostra versao instalada"
   echo "edev update                       Atualiza o DevKit via git pull"
+  echo "edev migrate                     Executa ajustes automaticos de instalacao"
   echo "edev doctor                       Verifica ambiente"
   echo ""
   echo "Setup:"

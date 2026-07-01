@@ -12,6 +12,7 @@ source "$EDEV_HOME/lib/java.sh"
 source "$EDEV_HOME/lib/node.sh"
 source "$EDEV_HOME/lib/servers.sh"
 source "$EDEV_HOME/lib/update.sh"
+source "$EDEV_HOME/lib/migrations.sh"
 
 case "$1" in
   help|"")
@@ -24,6 +25,10 @@ case "$1" in
 
   update)
     edevUpdate
+  ;;
+
+  migrate)
+    edevMigrate
   ;;    
 
   doctor)
